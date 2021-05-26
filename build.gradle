@@ -1,0 +1,135 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'maven-publish'
+    id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
+    id 'signing'
+}
+
+group group_name
+version release_version
+
+repositories {
+    mavenCentral()
+    maven {
+        name 'Sonatype_snapshots'
+        url 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+    }
+    maven {
+        name 'Sonatype_releases'
+        url 'https://s01.oss.sonatype.org/content/repositories/releases/'
+    }
+}
+
+
+dependencies {
+    // This dependency is exported to consumers, that is to say found on their compile classpath.
+    // https://mvnrepository.com/artifact/org.apache.commons/commons-math3
+    api group: 'org.apache.commons', name: 'commons-math3', version: '3.6.+'
+
+    // This dependency is used internally, and not exposed to consumers on their own compile classpath.
+    // https://mvnrepository.com/artifact/com.google.guava/guava
+    implementation group: 'com.google.guava', name: 'guava', version: '30.1.1-jre'
+
+    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-api
+    testImplementation group: 'org.junit.jupiter', name: 'junit-jupiter-api', version: '5.7.+'
+
+    // https://mvnrepository.com/artifact/org.junit.platform/junit-platform-launcher
+    testImplementation group: 'org.junit.platform', name: 'junit-platform-launcher', version: '1.7.+'
+
+    // https://mvnrepository.com/artifact/org.junit.jupiter/junit-jupiter-engine
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine'
+
+    // https://mvnrepository.com/artifact/org.junit.vintage/junit-vintage-engine
+    testImplementation group: 'org.junit.vintage', name: 'junit-vintage-engine', version: '5.7.+'
+
+    // https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-api
+    implementation group: 'org.seleniumhq.selenium', name: 'selenium-api', version: '3.+'
+
+    // https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-server
+    implementation group: 'org.seleniumhq.selenium', name: 'selenium-server', version: '3.+'
+
+    // https://mvnrepository.com/artifact/org.seleniumhq.selenium/selenium-java
+    implementation group: 'org.seleniumhq.selenium', name: 'selenium-java', version: '3.+'
+
+    // https://mvnrepository.com/artifact/io.github.bonigarcia/webdrivermanager
+    implementation group: 'io.github.bonigarcia', name: 'webdrivermanager', version: 'latest.release'
+}
+
+sourceCompatibility = 8
+targetCompatibility = 8
+
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
+tasks.withType(PublishToMavenRepository) {
+    onlyIf {
+        repository == publishing.repositories.sonatype &&
+                project.hasProperty('sonatypeUsername') &&
+                project.hasProperty('sonatypePassword')
+    }
+}
+tasks.withType(Sign) {
+    onlyIf {
+        project.hasProperty('signingKey') &&
+                project.hasProperty('signingPassword')
+    }
+}
+
+publishing {
+    publications {
+        mavenJava(MavenPublication) {
+            from(components.java)
+            pom {
+                name = rootProject.name
+                packaging = 'jar'
+                description = rootProject.description
+                groupId = group_name
+                artifactId = 'shadowroot-search'
+                version = release_version
+                url = vcs_url
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id = "densudas"
+                        name = "Denis Sudas"
+                        email = "dvsudas@gmail.com"
+                    }
+                }
+                scm {
+                    url = vcs_url
+                }
+            }
+        }
+    }
+}
+
+nexusPublishing {
+    repositories {
+        sonatype {
+            nexusUrl.set(uri("https://s01.oss.sonatype.org/service/local/"))
+            snapshotRepositoryUrl.set(uri("https://s01.oss.sonatype.org/content/repositories/snapshots/"))
+        }
+    }
+}
+
+signing {
+    def signingKey = findProperty("signingKey") as String
+    def signingPassword = findProperty("signingPassword") as String
+    useInMemoryPgpKeys(signingKey, signingPassword)
+    sign publishing.publications.mavenJava
+}
+
+tasks.test {
+    useJUnitPlatform()
+    systemProperties['junit.jupiter.execution.parallel.enabled'] = true
+    systemProperties['junit.jupiter.execution.parallel.mode.default'] = "concurrent"
+    maxParallelForks = Runtime.getRuntime().availableProcessors()
+}
