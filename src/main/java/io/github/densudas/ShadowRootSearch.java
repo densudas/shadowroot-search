@@ -91,7 +91,7 @@ public class ShadowRootSearch {
    *
    * @param rootNode {@link WebElement} search from node
    * @param selector {@link By} selector
-   * @return {@link Map} ["elementPath" -> {@link String}, "element" -> {@link WebElement}]
+   * @return {@link Map} ["elementPath": String, "element": WebElement]
    * @throws Exception exception
    */
   @SuppressWarnings("unchecked")
@@ -142,7 +142,7 @@ public class ShadowRootSearch {
    *
    * @param rootNode {@link WebElement} search from node
    * @param selector {@link By} selector
-   * @return {@link ArrayList<WebElement>} list of elements
+   * @return list of elements
    * @throws Exception exception
    */
   @SuppressWarnings("unchecked")
@@ -189,7 +189,7 @@ public class ShadowRootSearch {
    *
    * @param rootNode {@link WebElement} search from node
    * @param selector {@link By} selector
-   * @return {@link List<Map>} list of elements with path
+   * @return list of elements with path
    * @throws Exception exception
    */
   @SuppressWarnings("unchecked")
