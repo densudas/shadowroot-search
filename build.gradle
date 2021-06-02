@@ -2,7 +2,7 @@ plugins {
     id 'java'
     id 'java-library'
     id 'maven-publish'
-    id "io.github.gradle-nexus.publish-plugin" version "1.1.0"
+    id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
     id 'signing'
 }
 
@@ -121,7 +121,19 @@ nexusPublishing {
 }
 
 signing {
-    sign publishing.publications
+    def signingKey = findProperty("signingKey") as String
+    def signingPassword = findProperty("signingPassword") as String
+    if (signingKey) {
+        useInMemoryPgpKeys(signingKey, signingPassword)
+    } else {
+        useGpgCmd()
+    }
+    sign publishing.publications.mavenJava
+}
+
+tasks.withType(Sign) {
+    def hasKey = project.hasProperty("signingKey") || project.hasProperty("signing.gnupg.keyName")
+    onlyIf { hasKey && versionDetails().isCleanTag }
 }
 
 tasks.test {
