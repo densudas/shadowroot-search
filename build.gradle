@@ -4,6 +4,7 @@ plugins {
     id 'maven-publish'
     id 'io.github.gradle-nexus.publish-plugin' version '1.1.0'
     id 'signing'
+    id 'jacoco'
 }
 
 group group_name
@@ -121,6 +122,13 @@ if (hasProperty('buildScan')) {
     buildScan {
         termsOfServiceUrl = 'https://gradle.com/terms-of-service'
         termsOfServiceAgree = 'yes'
+    }
+}
+
+jacocoTestReport {
+    reports {
+        xml.enabled true
+        html.enabled false
     }
 }
 
