@@ -70,12 +70,6 @@ tasks.withType(PublishToMavenRepository) {
                 project.hasProperty('sonatypePassword')
     }
 }
-tasks.withType(Sign) {
-    onlyIf {
-        project.hasProperty('signingKey') &&
-                project.hasProperty('signingPassword')
-    }
-}
 
 publishing {
     publications {
