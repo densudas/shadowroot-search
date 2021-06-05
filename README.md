@@ -1,7 +1,7 @@
 # shadowroot-search
 
-[![Build Status](https://travis-ci.org/densudas/shadowroot-search.svg?branch=master)](https://travis-ci.com/github/densudas/shadowroot-search "Travis CI")
-[![codecov](https://codecov.io/gh/densudas/shadowroot-search/branch/master/graph/badge.svg)](https://codecov.io/gh/densudas/shadowroot-search)
+[![Build Status](https://travis-ci.org/densudas/shadowroot-search.svg?branch=main)](https://travis-ci.com/github/densudas/shadowroot-search "Travis CI")
+[![codecov](https://codecov.io/gh/densudas/shadowroot-search/branch/main/graph/badge.svg)](https://codecov.io/gh/densudas/shadowroot-search)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ### Limitations:
