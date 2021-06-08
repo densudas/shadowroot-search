@@ -35,6 +35,10 @@ public class ShadowRootSearch {
     DRIVER = driver;
   }
 
+  public WebDriver getDriver() {
+    return DRIVER;
+  }
+
   public WebElement findElement(By selector) throws Exception {
     return findElement(getDocument(), selector);
   }
