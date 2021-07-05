@@ -338,15 +338,75 @@ public class ShadowRootSearchTest {
   }
 
   @Test
-  public void testFindElementWithDifferentLocatorType() throws Exception {
+  public void testFindElementById() throws Exception {
     driver = getChromeDriver();
     driver.get(getPageContent());
     ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
     waitUntilPageLoaded();
-    String elementClass = "inside";
+    String elementClass = "outside-1";
+    WebElement element = shadowRootSearch.findElement(By.id(elementClass));
+
+    assert element.getText().equals("DOM element #1");
+  }
+
+  @Test
+  public void testFindElementByClassName() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String elementClass = "outside";
     WebElement element = shadowRootSearch.findElement(By.className(elementClass));
 
-    assert element.getText().contains("Inside Shadow DOM");
+    assert element.getText().equals("DOM element #1");
+  }
+
+  @Test
+  public void testFindElementByLinkText() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String link = "index.html";
+    WebElement element = shadowRootSearch.findElement(By.linkText(link));
+
+    assert element.getText().equals("Link");
+  }
+
+  @Test
+  public void testFindElementByPartialLinkText() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String link = "index";
+    WebElement element = shadowRootSearch.findElement(By.partialLinkText(link));
+
+    assert element.getText().equals("Link");
+  }
+
+  @Test
+  public void testFindElementByName() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String name = "outside-2";
+    WebElement element = shadowRootSearch.findElement(By.name(name));
+
+    assert element.getText().equals("DOM element #2");
+  }
+
+  @Test
+  public void testFindElementByTagName() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String tag = "a";
+    WebElement element = shadowRootSearch.findElement(By.tagName(tag));
+
+    assert element.getText().equals("Link");
   }
 
   @BeforeAll
