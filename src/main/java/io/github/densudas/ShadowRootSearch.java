@@ -35,6 +35,10 @@ public class ShadowRootSearch {
     DRIVER = driver;
   }
 
+  public WebDriver getDriver() {
+    return DRIVER;
+  }
+
   public WebElement findElement(By selector) throws Exception {
     return findElement(getDocument(), selector);
   }
@@ -60,13 +64,15 @@ public class ShadowRootSearch {
       script =
           String.format("return findElementByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
     } else {
-      throw new Exception("There is no such locator type: " + locatorType);
+      script =
+          String.format(
+              "return findElement(arguments[0], \"%s\");", locatorToCss(locatorType, locator));
     }
 
     element = (WebElement) executeJsFunction(rootNode, script);
     if (element == null) {
       throw new NoSuchElementException(
-          "Unable to locate element by the following" + locatorType + ":\n" + locator);
+          "Unable to locate element by " + locatorType + ": " + locator);
     }
     fixLocator(locator, locatorType, element);
 
@@ -84,7 +90,7 @@ public class ShadowRootSearch {
    *
    * <pre>output example:{@code
    * [
-   * "elementPath" -> ".querySelector('div[id=\'one']\').shadowRoot.querySelector('span[id=\'two']\').shadowRoot",
+   * "elementPath" -> ".querySelector('div[id=\'one\']').shadowRoot.querySelector('span[id=\'two\']').shadowRoot",
    * "element" -> WebElement
    * ]
    * }</pre>
@@ -114,13 +120,16 @@ public class ShadowRootSearch {
               "return findElementWithShadowPathByXpath(arguments[0], \"%s\");",
               escapeQuotes(locator));
     } else {
-      throw new Exception("There is no such locator type: " + locatorType);
+      script =
+          String.format(
+              "return findElementWithShadowPath(arguments[0], \"%s\");",
+              locatorToCss(locatorType, locator));
     }
 
     foundElementWithPath = (Map<String, Object>) executeJsFunction(rootNode, script);
     if (foundElementWithPath == null) {
       throw new NoSuchElementException(
-          "Unable to locate elementWithPath by the following " + locatorType + ":\n" + locator);
+          "Unable to locate elementWithPath by " + locatorType + ": " + locator);
     }
     element = (WebElement) foundElementWithPath.get("element");
     fixLocator(locator, locatorType, element);
@@ -159,7 +168,9 @@ public class ShadowRootSearch {
       script =
           String.format("return findElementsByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
     } else {
-      throw new Exception("There is no such locator type: " + locatorType);
+      script =
+          String.format(
+              "return findElements(arguments[0], \"%s\");", locatorToCss(locatorType, locator));
     }
 
     elements = (ArrayList<WebElement>) executeJsFunction(rootNode, script);
@@ -180,9 +191,9 @@ public class ShadowRootSearch {
    *
    * <pre>output: {@code
    * [
-   * {"elementPath" -> ".querySelector('div[id=\'one']\').shadowRoot.querySelector('span[id=\'two']\').shadowRoot",
+   * {"elementPath" -> ".querySelector('div[id=\'one\']').shadowRoot.querySelector('span[id=\'two\']').shadowRoot",
    *  "element" -> WebElement},
-   * {"elementPath" -> ".querySelector('div[id=\'three']\').shadowRoot.querySelector('span[id=\'four']\').shadowRoot",
+   * {"elementPath" -> ".querySelector('div[id=\'three\']').shadowRoot.querySelector('span[id=\'four\']').shadowRoot",
    *  "element" -> WebElement}
    * ]
    * }</pre>
@@ -211,7 +222,10 @@ public class ShadowRootSearch {
               "return findElementsWithShadowPathByXpath(arguments[0], \"%s\");",
               escapeQuotes(locator));
     } else {
-      throw new Exception("There is no such locator type: " + locatorType);
+      script =
+          String.format(
+              "return findElementsWithShadowPath(arguments[0], \"%s\");",
+              locatorToCss(locatorType, locator));
     }
 
     elementsWithShadowPath = (ArrayList<Map<String, Object>>) executeJsFunction(rootNode, script);
@@ -250,6 +264,36 @@ public class ShadowRootSearch {
         e.printStackTrace();
       }
     }
+  }
+
+  private String locatorToCss(String type, String locator) throws Exception {
+    String cssLocator;
+    locator = escapeQuotes(locator);
+
+    switch (type) {
+      case "id":
+        cssLocator = "#" + locator;
+        break;
+      case "className":
+        cssLocator = "." + locator;
+        break;
+      case "linkText":
+        cssLocator = "[href=" + locator + "]";
+        break;
+      case "partialLinkText":
+        cssLocator = "[href*=" + locator + "]";
+        break;
+      case "name":
+        cssLocator = "[name=" + locator + "]";
+        break;
+      case "tagName":
+        cssLocator = locator;
+        break;
+      default:
+        throw new Exception("There is no such locator type: " + type);
+    }
+
+    return cssLocator;
   }
 
   private WebElement getDocument() {

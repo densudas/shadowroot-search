@@ -337,6 +337,18 @@ public class ShadowRootSearchTest {
     }
   }
 
+  @Test
+  public void testFindElementWithDifferentLocatorType() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String elementClass = "inside";
+    WebElement element = shadowRootSearch.findElement(By.className(elementClass));
+
+    assert element.getText().contains("Inside Shadow DOM");
+  }
+
   @BeforeAll
   public static void setUp() {
     WebDriverManager.chromedriver().setup();
