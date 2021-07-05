@@ -9,19 +9,17 @@ import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.RemoteWebElement;
 
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.lang.reflect.Method;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ShadowRootSearch {
 
@@ -177,7 +175,7 @@ public class ShadowRootSearch {
 
     elements = (ArrayList<WebElement>) executeJsFunction(rootNode, script);
     if (elements == null) {
-      elements = new ArrayList<>();
+      return new ArrayList<>();
     }
     elements.forEach(webElement -> fixLocator(locator, locatorType, webElement));
 
@@ -232,8 +230,9 @@ public class ShadowRootSearch {
 
     elementsWithShadowPath = (ArrayList<Map<String, Object>>) executeJsFunction(rootNode, script);
     if (elementsWithShadowPath == null) {
-      elementsWithShadowPath = new ArrayList<>();
+      return new ArrayList<>();
     }
+
     return getElementsWithFixedLocators(locator, locatorType, elementsWithShadowPath);
   }
 
@@ -315,36 +314,15 @@ public class ShadowRootSearch {
     return getJSFile() + script;
   }
 
-  private StringBuilder getJSFile() throws URISyntaxException {
-    URL resource = ShadowRootSearch.class.getClassLoader().getResource(JS_FILE);
-    File jsFile;
-    if (resource == null) {
-      throw new IllegalArgumentException("file not found!");
-    } else {
-      jsFile = new File(resource.toURI());
-    }
-
-    StringBuilder text = new StringBuilder();
-    BufferedReader reader = null;
-    try {
-      reader = new BufferedReader(new FileReader(jsFile));
-    } catch (FileNotFoundException e) {
-      e.printStackTrace();
-    }
-    try {
-      assert reader != null;
-      while (reader.ready()) {
-        text.append(reader.readLine());
+  private String getJSFile() throws IOException {
+    ClassLoader classLoader = ClassLoader.getSystemClassLoader();
+    try (InputStream is = classLoader.getResourceAsStream(JS_FILE)) {
+      if (is == null) return null;
+      try (InputStreamReader isr = new InputStreamReader(is);
+          BufferedReader reader = new BufferedReader(isr)) {
+        return reader.lines().collect(Collectors.joining(System.lineSeparator()));
       }
-    } catch (IOException e) {
-      e.printStackTrace();
     }
-    try {
-      reader.close();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-    return text;
   }
 
   private static ArrayList<String> matchSelectorRegex(String selector) {
