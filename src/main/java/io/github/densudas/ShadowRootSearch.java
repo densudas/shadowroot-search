@@ -66,7 +66,8 @@ public class ShadowRootSearch {
     } else {
       script =
           String.format(
-              "return findElement(arguments[0], \"%s\");", locatorToCss(locatorType, locator));
+              "return findElement(arguments[0], \"%s\");",
+              escapeQuotes(locatorToCss(locatorType, locator)));
     }
 
     element = (WebElement) executeJsFunction(rootNode, script);
@@ -123,7 +124,7 @@ public class ShadowRootSearch {
       script =
           String.format(
               "return findElementWithShadowPath(arguments[0], \"%s\");",
-              locatorToCss(locatorType, locator));
+              escapeQuotes(locatorToCss(locatorType, locator)));
     }
 
     foundElementWithPath = (Map<String, Object>) executeJsFunction(rootNode, script);
@@ -170,7 +171,8 @@ public class ShadowRootSearch {
     } else {
       script =
           String.format(
-              "return findElements(arguments[0], \"%s\");", locatorToCss(locatorType, locator));
+              "return findElements(arguments[0], \"%s\");",
+              escapeQuotes(locatorToCss(locatorType, locator)));
     }
 
     elements = (ArrayList<WebElement>) executeJsFunction(rootNode, script);
@@ -225,7 +227,7 @@ public class ShadowRootSearch {
       script =
           String.format(
               "return findElementsWithShadowPath(arguments[0], \"%s\");",
-              locatorToCss(locatorType, locator));
+              escapeQuotes(locatorToCss(locatorType, locator)));
     }
 
     elementsWithShadowPath = (ArrayList<Map<String, Object>>) executeJsFunction(rootNode, script);
@@ -278,13 +280,13 @@ public class ShadowRootSearch {
         cssLocator = "." + locator;
         break;
       case "linkText":
-        cssLocator = "[href=" + locator + "]";
+        cssLocator = "[href=\"" + locator + "\"]";
         break;
       case "partialLinkText":
-        cssLocator = "[href*=" + locator + "]";
+        cssLocator = "[href*=\"" + locator + "\"]";
         break;
       case "name":
-        cssLocator = "[name=" + locator + "]";
+        cssLocator = "[name=\"" + locator + "\"]";
         break;
       case "tagName":
         cssLocator = locator;
