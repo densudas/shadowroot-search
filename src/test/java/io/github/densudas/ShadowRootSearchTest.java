@@ -1,11 +1,13 @@
 package io.github.densudas;
 
 import io.github.bonigarcia.wdm.WebDriverManager;
+import org.junit.Assert;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
+import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -407,6 +409,37 @@ public class ShadowRootSearchTest {
     WebElement element = shadowRootSearch.findElement(By.tagName(tag));
 
     assert element.getText().equals("Link");
+  }
+
+  @Test
+  public void testGetDriver() {
+    driver = getChromeDriver();
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    assert shadowRootSearch.getDriver() == driver;
+  }
+
+  @Test
+  public void testFindElementNegative() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String elementCss = ".wrong";
+    Assert.assertThrows(
+        NoSuchElementException.class,
+        () -> shadowRootSearch.findElement(By.cssSelector(elementCss)));
+  }
+
+  @Test
+  public void testFindElementWithShadowPathNegative() throws Exception {
+    driver = getChromeDriver();
+    driver.get(getPageContent());
+    ShadowRootSearch shadowRootSearch = new ShadowRootSearch(driver);
+    waitUntilPageLoaded();
+    String elementCss = ".wrong";
+    Assert.assertThrows(
+        NoSuchElementException.class,
+        () -> shadowRootSearch.findElementWithShadowPath(By.cssSelector(elementCss)));
   }
 
   @BeforeAll
