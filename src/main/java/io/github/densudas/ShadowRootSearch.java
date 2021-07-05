@@ -70,7 +70,7 @@ public class ShadowRootSearch {
     element = (WebElement) executeJsFunction(rootNode, script);
     if (element == null) {
       throw new NoSuchElementException(
-          "Unable to locate element by the following" + locatorType + ":\n" + locator);
+          "Unable to locate element by " + locatorType + ": " + locator);
     }
     fixLocator(locator, locatorType, element);
 
@@ -124,7 +124,7 @@ public class ShadowRootSearch {
     foundElementWithPath = (Map<String, Object>) executeJsFunction(rootNode, script);
     if (foundElementWithPath == null) {
       throw new NoSuchElementException(
-          "Unable to locate elementWithPath by the following " + locatorType + ":\n" + locator);
+          "Unable to locate elementWithPath by " + locatorType + ": " + locator);
     }
     element = (WebElement) foundElementWithPath.get("element");
     fixLocator(locator, locatorType, element);
