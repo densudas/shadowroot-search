@@ -16,6 +16,7 @@ import org.openqa.selenium.remote.RemoteWebDriver;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.net.URL;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -23,6 +24,26 @@ import java.util.Objects;
 public class ShadowRootSearchTest {
 
   private WebDriver driver;
+
+  @BeforeAll
+  public static void setUp() {
+    WebDriverManager.chromedriver().setup();
+  }
+
+  private static RemoteWebDriver getChromeDriver() {
+    ChromeOptions options = new ChromeOptions();
+    options.addArguments("--headless");
+    return new ChromeDriver(options);
+  }
+
+  private static String getPageContent() throws Exception {
+    String fileName = "index.html";
+    URL url = ShadowRootSearchTest.class.getClassLoader().getResource(fileName);
+    if (url == null) {
+      throw new Exception("No such file: " + fileName);
+    }
+    return "file://" + Objects.requireNonNull(url).getPath();
+  }
 
   @Test
   public void testFindElementInside() throws Exception {
@@ -442,18 +463,13 @@ public class ShadowRootSearchTest {
         () -> shadowRootSearch.findElementWithShadowPath(By.cssSelector(elementCss)));
   }
 
-  @BeforeAll
-  public static void setUp() {
-    WebDriverManager.chromedriver().setup();
-  }
-
   @AfterEach
   public void shutdown() {
     driverQuit();
   }
 
   private void waitUntilPageLoaded() throws InterruptedException {
-    new WebDriverWait(driver, 10)
+    new WebDriverWait(driver, Duration.ofSeconds(10))
         .until(
             webDriver ->
                 jsExecutor(webDriver)
@@ -470,20 +486,5 @@ public class ShadowRootSearchTest {
     if (driver != null) {
       driver.quit();
     }
-  }
-
-  private static RemoteWebDriver getChromeDriver() {
-    ChromeOptions options = new ChromeOptions();
-    options.addArguments("--headless");
-    return new ChromeDriver(options);
-  }
-
-  private static String getPageContent() throws Exception {
-    String fileName = "index.html";
-    URL url = ShadowRootSearchTest.class.getClassLoader().getResource(fileName);
-    if (url == null) {
-      throw new Exception("No such file: " + fileName);
-    }
-    return "file://" + Objects.requireNonNull(url).getPath();
   }
 }
