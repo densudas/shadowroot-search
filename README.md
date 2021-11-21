@@ -1,4 +1,5 @@
 [![Build Status](https://www.travis-ci.com/densudas/shadowroot-search.svg?branch=main)](https://travis-ci.com/github/densudas/shadowroot-search "Travis CI")
+[![badge-jdk](https://img.shields.io/badge/jdk-8-green.svg)](https://www.oracle.com/java/technologies/javase-downloads.html)
 [![codecov](https://codecov.io/gh/densudas/shadowroot-search/branch/main/graph/badge.svg?token=3BMuAiVfbk)](https://codecov.io/gh/densudas/shadowroot-search)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
