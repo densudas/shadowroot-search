@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.openqa.selenium.By;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
+import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
@@ -194,8 +195,8 @@ public class ShadowRootSearchTest {
         shadowRootSearch.findElementWithShadowPath(By.cssSelector(elementCss));
     String shadowPathJs = (String) element.get("elementPath");
     WebElement webElement = (WebElement) element.get("element");
-    WebElement shadowPath =
-        (WebElement) jsExecutor(driver).executeScript("return document" + shadowPathJs);
+    SearchContext shadowPath =
+        (SearchContext) jsExecutor(driver).executeScript("return document" + shadowPathJs);
 
     assert shadowPath.findElement(By.cssSelector(elementCss)).equals(webElement);
   }
@@ -211,8 +212,8 @@ public class ShadowRootSearchTest {
         shadowRootSearch.findElementWithShadowPath(By.xpath(elementXpath));
     String shadowPathJs = (String) element.get("elementPath");
     WebElement webElement = (WebElement) element.get("element");
-    WebElement shadowPath =
-        (WebElement) jsExecutor(driver).executeScript("return document" + shadowPathJs);
+    SearchContext shadowPath =
+        (SearchContext) jsExecutor(driver).executeScript("return document" + shadowPathJs);
 
     assert shadowPath.findElement(By.cssSelector(".inside")).equals(webElement);
   }
@@ -230,8 +231,8 @@ public class ShadowRootSearchTest {
     for (Map<String, Object> element : elements) {
       String shadowPathJs = (String) element.get("elementPath");
       WebElement webElement = (WebElement) element.get("element");
-      WebElement shadowPath =
-          (WebElement) jsExecutor(driver).executeScript("return document" + shadowPathJs);
+      SearchContext shadowPath =
+          (SearchContext) jsExecutor(driver).executeScript("return document" + shadowPathJs);
 
       assert shadowPath.findElement(By.cssSelector(elementCss)).equals(webElement);
     }
@@ -250,8 +251,8 @@ public class ShadowRootSearchTest {
     for (Map<String, Object> element : elements) {
       String shadowPathJs = (String) element.get("elementPath");
       WebElement webElement = (WebElement) element.get("element");
-      WebElement shadowPath =
-          (WebElement) jsExecutor(driver).executeScript("return document" + shadowPathJs);
+      SearchContext shadowPath =
+          (SearchContext) jsExecutor(driver).executeScript("return document" + shadowPathJs);
 
       assert shadowPath.findElement(By.cssSelector(".inside")).equals(webElement);
     }
@@ -327,8 +328,8 @@ public class ShadowRootSearchTest {
         shadowRootSearch.findElementWithShadowPath(shadowDomContainer, By.cssSelector(elementCss));
     String shadowPathJs = (String) element.get("elementPath");
     WebElement webElement = (WebElement) element.get("element");
-    WebElement shadowPath =
-        (WebElement)
+    SearchContext shadowPath =
+        (SearchContext)
             jsExecutor(driver)
                 .executeScript("return arguments[0]" + shadowPathJs, shadowDomContainer);
 
@@ -351,8 +352,8 @@ public class ShadowRootSearchTest {
     for (Map<String, Object> element : elements) {
       String shadowPathJs = (String) element.get("elementPath");
       WebElement webElement = (WebElement) element.get("element");
-      WebElement shadowPath =
-          (WebElement)
+      SearchContext shadowPath =
+          (SearchContext)
               jsExecutor(driver)
                   .executeScript("return arguments[0]" + shadowPathJs, shadowDomContainer);
 
