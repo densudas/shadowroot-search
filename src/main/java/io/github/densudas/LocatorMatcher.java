@@ -47,6 +47,7 @@ public class LocatorMatcher {
         break;
       default:
         how = How.valueOf(locatorTypeString.toUpperCase());
+        break;
     }
     return how;
   }
