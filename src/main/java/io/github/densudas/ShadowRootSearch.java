@@ -7,6 +7,7 @@ import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.RemoteWebElement;
+import org.openqa.selenium.support.How;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -17,17 +18,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 public class ShadowRootSearch {
 
-  private final WebDriver DRIVER;
-  private static final String CSS_SELECTOR = "cssSelector";
-  private static final String XPATH = "xpath";
-  private static final String SELECTOR_REGEX = "^By\\.(\\w+): (.*)$";
   private static final String JS_FILE = "shadowRootSearch.js";
+  private final WebDriver DRIVER;
 
   public ShadowRootSearch(WebDriver driver) {
     DRIVER = driver;
@@ -51,21 +47,26 @@ public class ShadowRootSearch {
    */
   public WebElement findElement(WebElement rootNode, By selector) throws Exception {
     WebElement element;
-    ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-    String locatorType = selectorMatch.get(1);
-    String locator = selectorMatch.get(2);
+    LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+    How locatorType = locatorMatcher.getLocatorType();
+    String locator = locatorMatcher.getLocator();
     String script;
 
-    if (CSS_SELECTOR.equals(locatorType)) {
-      script = String.format("return findElement(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else if (XPATH.equals(locatorType)) {
-      script =
-          String.format("return findElementByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else {
-      script =
-          String.format(
-              "return findElement(arguments[0], \"%s\");",
-              escapeQuotes(locatorToCss(locatorType, locator)));
+    switch (locatorType) {
+      case CSS:
+        script = String.format("return findElement(arguments[0], \"%s\");", escapeQuotes(locator));
+        break;
+      case XPATH:
+        script =
+            String.format(
+                "return findElementByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
+        break;
+      default:
+        script =
+            String.format(
+                "return findElement(arguments[0], \"%s\");",
+                escapeQuotes(locatorToCss(locatorType, locator)));
+        break;
     }
 
     element = (WebElement) executeJsFunction(rootNode, script);
@@ -104,25 +105,29 @@ public class ShadowRootSearch {
       throws Exception {
     Map<String, Object> foundElementWithPath;
     WebElement element;
-    ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-    String locatorType = selectorMatch.get(1);
-    String locator = selectorMatch.get(2);
+    LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+    How locatorType = locatorMatcher.getLocatorType();
+    String locator = locatorMatcher.getLocator();
     String script;
 
-    if (CSS_SELECTOR.equals(locatorType)) {
-      script =
-          String.format(
-              "return findElementWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else if (XPATH.equals(locatorType)) {
-      script =
-          String.format(
-              "return findElementWithShadowPathByXpath(arguments[0], \"%s\");",
-              escapeQuotes(locator));
-    } else {
-      script =
-          String.format(
-              "return findElementWithShadowPath(arguments[0], \"%s\");",
-              escapeQuotes(locatorToCss(locatorType, locator)));
+    switch (locatorType) {
+      case CSS:
+        script =
+            String.format(
+                "return findElementWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
+        break;
+      case XPATH:
+        script =
+            String.format(
+                "return findElementWithShadowPathByXpath(arguments[0], \"%s\");",
+                escapeQuotes(locator));
+        break;
+      default:
+        script =
+            String.format(
+                "return findElementWithShadowPath(arguments[0], \"%s\");",
+                escapeQuotes(locatorToCss(locatorType, locator)));
+        break;
     }
 
     foundElementWithPath = (Map<String, Object>) executeJsFunction(rootNode, script);
@@ -156,21 +161,27 @@ public class ShadowRootSearch {
   @SuppressWarnings("unchecked")
   public ArrayList<WebElement> findElements(WebElement rootNode, By selector) throws Exception {
     ArrayList<WebElement> elements;
-    ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-    String locatorType = selectorMatch.get(1);
-    String locator = selectorMatch.get(2);
+    LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+    How locatorType = locatorMatcher.getLocatorType();
+    String locator = locatorMatcher.getLocator();
     String script;
 
-    if (CSS_SELECTOR.equals(locatorType)) {
-      script = String.format("return findElements(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else if (XPATH.equals(locatorType)) {
-      script =
-          String.format("return findElementsByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else {
-      script =
-          String.format(
-              "return findElements(arguments[0], \"%s\");",
-              escapeQuotes(locatorToCss(locatorType, locator)));
+    switch (locatorType) {
+      case CSS:
+        script = String.format("return findElements(arguments[0], \"%s\");", escapeQuotes(locator));
+
+        break;
+      case XPATH:
+        script =
+            String.format(
+                "return findElementsByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
+        break;
+      default:
+        script =
+            String.format(
+                "return findElements(arguments[0], \"%s\");",
+                escapeQuotes(locatorToCss(locatorType, locator)));
+        break;
     }
 
     elements = (ArrayList<WebElement>) executeJsFunction(rootNode, script);
@@ -207,25 +218,29 @@ public class ShadowRootSearch {
   public List<Map<String, Object>> findElementsWithShadowPath(WebElement rootNode, By selector)
       throws Exception {
     ArrayList<Map<String, Object>> elementsWithShadowPath;
-    ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-    String locatorType = selectorMatch.get(1);
-    String locator = selectorMatch.get(2);
+    LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+    How locatorType = locatorMatcher.getLocatorType();
+    String locator = locatorMatcher.getLocator();
     String script;
 
-    if (CSS_SELECTOR.equals(locatorType)) {
-      script =
-          String.format(
-              "return findElementsWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
-    } else if (XPATH.equals(locatorType)) {
-      script =
-          String.format(
-              "return findElementsWithShadowPathByXpath(arguments[0], \"%s\");",
-              escapeQuotes(locator));
-    } else {
-      script =
-          String.format(
-              "return findElementsWithShadowPath(arguments[0], \"%s\");",
-              escapeQuotes(locatorToCss(locatorType, locator)));
+    switch (locatorType) {
+      case CSS:
+        script =
+            String.format(
+                "return findElementsWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
+        break;
+      case XPATH:
+        script =
+            String.format(
+                "return findElementsWithShadowPathByXpath(arguments[0], \"%s\");",
+                escapeQuotes(locator));
+        break;
+      default:
+        script =
+            String.format(
+                "return findElementsWithShadowPath(arguments[0], \"%s\");",
+                escapeQuotes(locatorToCss(locatorType, locator)));
+        break;
     }
 
     elementsWithShadowPath = (ArrayList<Map<String, Object>>) executeJsFunction(rootNode, script);
@@ -237,7 +252,7 @@ public class ShadowRootSearch {
   }
 
   private List<Map<String, Object>> getElementsWithFixedLocators(
-      String locator, String locatorType, List<Map<String, Object>> elements) {
+      String locator, How locatorType, List<Map<String, Object>> elements) {
     List<Map<String, Object>> fixedElements = new ArrayList<>();
     for (Map<String, Object> element : elements) {
       WebElement webElement = (WebElement) element.get("element");
@@ -253,13 +268,13 @@ public class ShadowRootSearch {
     return fixedElements;
   }
 
-  private void fixLocator(String locator, String locatorType, WebElement element) {
+  private void fixLocator(String locator, How locatorType, WebElement element) {
     if (element instanceof RemoteWebElement) {
       try {
         Class<?>[] parameterTypes = new Class[] {SearchContext.class, String.class, String.class};
         Method m = element.getClass().getDeclaredMethod("setFoundBy", parameterTypes);
         m.setAccessible(true);
-        Object[] parameters = new Object[] {DRIVER, locatorType, locator};
+        Object[] parameters = new Object[] {DRIVER, locatorType.toString(), locator};
         m.invoke(element, parameters);
       } catch (Exception e) {
         e.printStackTrace();
@@ -267,27 +282,27 @@ public class ShadowRootSearch {
     }
   }
 
-  private String locatorToCss(String type, String locator) throws Exception {
+  private String locatorToCss(How type, String locator) throws Exception {
     String cssLocator;
     locator = escapeQuotes(locator);
 
     switch (type) {
-      case "id":
+      case ID:
         cssLocator = "#" + locator;
         break;
-      case "className":
+      case CLASS_NAME:
         cssLocator = "." + locator;
         break;
-      case "linkText":
+      case LINK_TEXT:
         cssLocator = "[href=\"" + locator + "\"]";
         break;
-      case "partialLinkText":
+      case PARTIAL_LINK_TEXT:
         cssLocator = "[href*=\"" + locator + "\"]";
         break;
-      case "name":
+      case NAME:
         cssLocator = "[name=\"" + locator + "\"]";
         break;
-      case "tagName":
+      case TAG_NAME:
         cssLocator = locator;
         break;
       default:
@@ -323,17 +338,6 @@ public class ShadowRootSearch {
         return reader.lines().collect(Collectors.joining(System.lineSeparator()));
       }
     }
-  }
-
-  private static ArrayList<String> matchSelectorRegex(String selector) {
-    ArrayList<String> groups = new ArrayList<>();
-    Matcher matcher = Pattern.compile(SELECTOR_REGEX).matcher(selector);
-    if (matcher.find()) {
-      for (int i = 0; i <= matcher.groupCount(); i++) {
-        groups.add(matcher.group(i));
-      }
-    }
-    return groups;
   }
 
   private String escapeQuotes(String str) {
