@@ -1,14 +1,13 @@
 package io.github.densudas;
 
 import org.openqa.selenium.By;
-import org.openqa.selenium.InvalidArgumentException;
 import org.openqa.selenium.JavascriptExecutor;
 import org.openqa.selenium.NoSuchElementException;
 import org.openqa.selenium.SearchContext;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.remote.RemoteWebElement;
+import org.openqa.selenium.support.How;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -18,16 +17,10 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
-public final class ShadowRootSearch {
+public class ShadowRootSearch {
 
-    private static final String CSS_SELECTOR = "cssSelector";
-    private static final String XPATH = "xpath";
-    private static final String SELECTOR_REGEX = "^By\\.(\\w+): (.*)$";
     private static final String JS_FILE = "shadowRootSearch.js";
     private final WebDriver driver;
 
@@ -35,41 +28,37 @@ public final class ShadowRootSearch {
         this.driver = driver;
     }
 
-    private static ArrayList<String> matchSelectorRegex(String selector) {
-        ArrayList<String> groups = new ArrayList<>();
-        Matcher matcher = Pattern.compile(SELECTOR_REGEX).matcher(selector);
-        if (matcher.find()) {
-            for (int i = 0; i <= matcher.groupCount(); i++) {
-                groups.add(matcher.group(i));
-            }
-        }
-        return groups;
+    public WebDriver getDriver() {
+        return driver;
     }
 
-    public WebElement findElement(By selector) throws IOException {
+    public WebElement findElement(By selector) throws Exception {
         return findElement(getDocument(), selector);
     }
 
     /**
-     * Finds an element using a CSS selector, traversing both the main document and any encapsulated shadow DOMs.
-     * This method extends the search to penetrate shadow roots, providing a comprehensive query that includes
-     * elements within the shadow trees. It is particularly useful when dealing with Web Components where elements
-     * are often wrapped in shadow DOMs that standard finders cannot reach.
+     * Recursively searches for an element matching the provided CSS selector, traversing through nested shadow DOMs.
+     * This method begins the search from the specified root node and probes into shadow roots to locate the desired element.
+     * It effectively pierces through multiple levels of shadow DOM encapsulation to find elements that are not directly accessible via traditional DOM querying methods.
      *
-     * @param rootNode The root element from which to begin the search. This can be the document or any element within it.
-     * @param selector The locating mechanism to use when finding the element. It should be a By.cssSelector indicating
-     *                 the CSS path to the element. Note that this should not be used with other By types, as this method
-     *                 is specialized for CSS selection within shadow roots.
-     * @return The first WebElement matching the specified selector within the normal DOM and shadow DOMs.
-     * @throws NoSuchElementException If the element cannot be found using the provided selector across the normal and shadow DOMs.
-     * @throws IOException            If there are issues in executing the underlying JavaScript or interacting with the elements.
+     * @param rootNode The starting {@link WebElement} from which to begin the search, typically the document root or a known shadow-hosting element.
+     * @param selector The {@link By} instance encapsulating the CSS selector used to identify the target element.
+     * @return The first {@link WebElement} found that matches the selector criteria, or null if no such element is found.
+     * @throws Exception Throws a generic Exception if an error occurs during the search process. Specific exceptions, such as {@link NoSuchElementException}, may be thrown to indicate the absence of a matching element.
      */
-    public WebElement findElement(WebElement rootNode, By selector) throws IOException {
+    public WebElement findElement(WebElement rootNode, By selector) throws Exception {
         WebElement element;
-        ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-        String locatorType = selectorMatch.get(1);
-        String locator = selectorMatch.get(2);
-        String script = getString(locatorType, "return findElement(arguments[0], \"%s\");", locator, "return findElementByXpath(arguments[0], \"%s\");");
+        LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+        How locatorType = locatorMatcher.getLocatorType();
+        String locator = locatorMatcher.getLocator();
+        String script = switch (locatorType) {
+            case CSS -> String.format("return findElement(arguments[0], \"%s\");", escapeQuotes(locator));
+            case XPATH -> String.format(
+                    "return findElementByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
+            default -> String.format(
+                    "return findElement(arguments[0], \"%s\");",
+                    escapeQuotes(locatorToCss(locatorType, locator)));
+        };
 
         element = (WebElement) executeJsFunction(rootNode, script);
         if (element == null) {
@@ -86,40 +75,50 @@ public final class ShadowRootSearch {
     }
 
     /**
-     * Searches for an element using a CSS selector and provides a direct path to access the element,
-     * considering shadow DOM encapsulation. The method returns a map containing the 'elementPath'—a string
-     * that represents the DOM and shadow DOM navigation path to the element—and the 'element' itself as a WebElement.
+     * Searches for a web element using a CSS selector, scanning through any nested shadow DOM structures.
+     * This method not only finds the element but also provides the "shadowPath" — a string representation of the
+     * DOM query needed to directly access the element. This path can be used for direct element access in future operations.
      * <p>
-     * The 'elementPath' can be used for direct access to the element in subsequent queries, bypassing the need
-     * for repeated shadow root traversals. This is particularly useful for efficiently accessing deeply nested elements
-     * within shadow DOMs.
+     * For instance, if an element is located inside multiple shadow roots, the method returns a map containing
+     * the "elementPath" which is a chain of querySelector calls reaching into the respective shadowRoots, and
+     * the "element" itself. This allows for re-querying the element without repeating the entire search process.
      * <p>
-     * Example usage:
-     * WebElement foundElement = shadowRootSearch.findElementWithShadowPath(root, By.cssSelector("span")).get("element");
-     * String elementPath = (String) shadowRootSearch.findElementWithShadowPath(root, By.cssSelector("span")).get("elementPath");
-     * // The element can now be accessed directly using the elementPath in a JavaScript execution context.
+     * The output is a map where "elementPath" is a string that describes how to locate the element from the root,
+     * using JavaScript query selectors and shadowRoot property accesses, and "element" is the found WebElement.
      * <p>
-     * Output example:<br>
-     * {
-     * <br>"elementPath": ".querySelector('div[id=\'one\']').shadowRoot.querySelector('span[id=\'two\']').shadowRoot",
-     * <br>"element": WebElement (the found web element)<br>
-     * }
+     * Example of the output structure provided in the map:
+     * <pre>{@code
+     * [
+     *   "elementPath" -> ".querySelector('div[id=\'one\']').shadowRoot.querySelector('span[id=\'two\']').shadowRoot",
+     *   "element" -> WebElement
+     * ]
+     * }</pre>
+     * <p>
+     * This method improves efficiency by encapsulating the detailed path for element location, which simplifies
+     * repeated access to that element in complex DOM structures.
      *
-     * @param rootNode The WebElement that serves as the starting point for the search. It could be the document or any node within it.
-     * @param selector A By object representing the CSS selector used to find the element.
-     * @return A Map containing the 'elementPath' and the 'element'. The 'elementPath' is a string that details the steps to reach the
-     * element within the shadow DOM, and 'element' is the located WebElement.
-     * @throws NoSuchElementException If the element cannot be located with the provided selector across the shadow DOMs.
-     * @throws IOException            If there's an error reading the JavaScript file required for execution.
-     * @throws WebDriverException     If an error occurs during the execution of the JavaScript to find the element.
+     * @param rootNode The starting {@link WebElement} from which to commence the search.
+     * @param selector The {@link By} instance defining the CSS selector for finding the element.
+     * @return A {@link Map} with keys "elementPath" and "element", mapping to the path string and the found WebElement respectively.
+     * @throws Exception A general exception is thrown if the search or retrieval of the element fails.
      */
-    public Map<String, Object> findElementWithShadowPath(WebElement rootNode, By selector) throws IOException {
+    public Map<String, Object> findElementWithShadowPath(WebElement rootNode, By selector)
+            throws Exception {
         Map<String, Object> foundElementWithPath;
         WebElement element;
-        ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-        String locatorType = selectorMatch.get(1);
-        String locator = selectorMatch.get(2);
-        String script = getString(locatorType, "return findElementWithShadowPath(arguments[0], \"%s\");", locator, "return findElementWithShadowPathByXpath(arguments[0], \"%s\");");
+        LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+        How locatorType = locatorMatcher.getLocatorType();
+        String locator = locatorMatcher.getLocator();
+        String script = switch (locatorType) {
+            case CSS -> String.format(
+                    "return findElementWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
+            case XPATH -> String.format(
+                    "return findElementWithShadowPathByXpath(arguments[0], \"%s\");",
+                    escapeQuotes(locator));
+            default -> String.format(
+                    "return findElementWithShadowPath(arguments[0], \"%s\");",
+                    escapeQuotes(locatorToCss(locatorType, locator)));
+        };
 
         foundElementWithPath = (Map<String, Object>) executeJsFunction(rootNode, script);
         if (foundElementWithPath == null) {
@@ -132,45 +131,31 @@ public final class ShadowRootSearch {
         return Map.of("element", element, "elementPath", foundElementWithPath.get("elementPath"));
     }
 
-    private String getString(String locatorType, String format, String locator, String format1) {
-        String script;
-
-        if (CSS_SELECTOR.equals(locatorType)) {
-            script =
-                    String.format(
-                            format, escapeQuotes(locator));
-        } else if (XPATH.equals(locatorType)) {
-            script =
-                    String.format(
-                            format1,
-                            escapeQuotes(locator));
-        } else {
-            script =
-                    String.format(
-                            format,
-                            escapeQuotes(locatorToCss(locatorType, locator)));
-        }
-        return script;
-    }
-
     public List<WebElement> findElements(By selector) throws Exception {
         return findElements(getDocument(), selector);
     }
 
     /**
-     * Retrieves a collection of elements matched by a CSS selector across all shadow DOMs.
+     * Finds elements by cssSelector. It also searches in every shadowRoot
      *
-     * @param rootNode The root node to initiate the search from.
-     * @param selector The CSS selector used to find elements.
-     * @return A List containing the matched elements.
-     * @throws Exception If an error occurs during the search process.
+     * @param rootNode {@link WebElement} search from node
+     * @param selector {@link By} selector
+     * @return list of elements
+     * @throws Exception exception
      */
     public List<WebElement> findElements(WebElement rootNode, By selector) throws Exception {
         ArrayList<WebElement> elements;
-        ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-        String locatorType = selectorMatch.get(1);
-        String locator = selectorMatch.get(2);
-        String script = getString(locatorType, "return findElements(arguments[0], \"%s\");", locator, "return findElementsByXpath(arguments[0], \"%s\");");
+        LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+        How locatorType = locatorMatcher.getLocatorType();
+        String locator = locatorMatcher.getLocator();
+        String script = switch (locatorType) {
+            case CSS -> String.format("return findElements(arguments[0], \"%s\");", escapeQuotes(locator));
+            case XPATH -> String.format(
+                    "return findElementsByXpath(arguments[0], \"%s\");", escapeQuotes(locator));
+            default -> String.format(
+                    "return findElements(arguments[0], \"%s\");",
+                    escapeQuotes(locatorToCss(locatorType, locator)));
+        };
 
         elements = (ArrayList<WebElement>) executeJsFunction(rootNode, script);
         if (elements == null) {
@@ -203,12 +188,21 @@ public final class ShadowRootSearch {
      * @throws Exception exception
      */
     public List<Map<String, Object>> findElementsWithShadowPath(WebElement rootNode, By selector)
-            throws IOException {
+            throws Exception {
         ArrayList<Map<String, Object>> elementsWithShadowPath;
-        ArrayList<String> selectorMatch = matchSelectorRegex(selector.toString());
-        String locatorType = selectorMatch.get(1);
-        String locator = selectorMatch.get(2);
-        String script = getString(locatorType, "return findElementsWithShadowPath(arguments[0], \"%s\");", locator, "return findElementsWithShadowPathByXpath(arguments[0], \"%s\");");
+        LocatorMatcher locatorMatcher = new LocatorMatcher(selector);
+        How locatorType = locatorMatcher.getLocatorType();
+        String locator = locatorMatcher.getLocator();
+        String script = switch (locatorType) {
+            case CSS -> String.format(
+                    "return findElementsWithShadowPath(arguments[0], \"%s\");", escapeQuotes(locator));
+            case XPATH -> String.format(
+                    "return findElementsWithShadowPathByXpath(arguments[0], \"%s\");",
+                    escapeQuotes(locator));
+            default -> String.format(
+                    "return findElementsWithShadowPath(arguments[0], \"%s\");",
+                    escapeQuotes(locatorToCss(locatorType, locator)));
+        };
 
         elementsWithShadowPath = (ArrayList<Map<String, Object>>) executeJsFunction(rootNode, script);
         if (elementsWithShadowPath == null) {
@@ -219,7 +213,7 @@ public final class ShadowRootSearch {
     }
 
     private List<Map<String, Object>> getElementsWithFixedLocators(
-            String locator, String locatorType, List<Map<String, Object>> elements) {
+            String locator, How locatorType, List<Map<String, Object>> elements) {
         List<Map<String, Object>> fixedElements = new ArrayList<>();
         for (Map<String, Object> element : elements) {
             WebElement webElement = (WebElement) element.get("element");
@@ -232,30 +226,34 @@ public final class ShadowRootSearch {
         return fixedElements;
     }
 
-    private void fixLocator(String locator, String locatorType, WebElement element) {
+    private void fixLocator(String locator, How locatorType, WebElement element) {
         if (element instanceof RemoteWebElement) {
             try {
                 Class<?>[] parameterTypes = new Class[]{SearchContext.class, String.class, String.class};
                 Method m = element.getClass().getDeclaredMethod("setFoundBy", parameterTypes);
-                Object[] parameters = new Object[]{driver, locatorType, locator};
+
+                //TODO: revise the following setting
+                m.setAccessible(true);
+
+                Object[] parameters = new Object[]{driver, locatorType.toString(), locator};
                 m.invoke(element, parameters);
             } catch (Exception e) {
-                System.out.println(e.getMessage());
+                e.printStackTrace();
             }
         }
     }
 
-    private String locatorToCss(String type, String locator) {
+    private String locatorToCss(How type, String locator) {
         locator = escapeQuotes(locator);
 
         return switch (type) {
-            case "id" -> "#" + locator;
-            case "className" -> "." + locator;
-            case "linkText" -> "[href=\"" + locator + "\"]";
-            case "partialLinkText" -> "[href*=\"" + locator + "\"]";
-            case "name" -> "[name=\"" + locator + "\"]";
-            case "tagName" -> locator;
-            default -> throw new InvalidArgumentException("There is no such locator type: " + type);
+            case ID -> "#" + locator;
+            case CLASS_NAME -> "." + locator;
+            case LINK_TEXT -> "[href=\"" + locator + "\"]";
+            case PARTIAL_LINK_TEXT -> "[href*=\"" + locator + "\"]";
+            case NAME -> "[name=\"" + locator + "\"]";
+            case TAG_NAME -> locator;
+            default -> throw new IllegalArgumentException("There is no such locator type: " + type);
         };
     }
 
@@ -292,28 +290,4 @@ public final class ShadowRootSearch {
     private String escapeQuotes(String str) {
         return str.replace("\"", "\\\"");
     }
-
-    public WebDriver driver() {
-        return driver;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-        if (obj == this) return true;
-        if (obj == null || obj.getClass() != this.getClass()) return false;
-        var that = (ShadowRootSearch) obj;
-        return Objects.equals(this.driver, that.driver);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(driver);
-    }
-
-    @Override
-    public String toString() {
-        return "ShadowRootSearch[" +
-                "driver=" + driver + ']';
-    }
-
 }
